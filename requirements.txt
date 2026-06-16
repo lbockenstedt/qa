@@ -1,0 +1,6 @@
+httpx
+websockets
+playwright
+pycryptodomex
+fastapi
+uvicorn
