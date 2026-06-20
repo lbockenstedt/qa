@@ -5,10 +5,10 @@ import threading
 import httpx
 import uvicorn
 from fastapi import FastAPI
-from lm.core.src.messaging.control_plane import BaseControlPlane
-from .qa_spoke import QASpoke
-from .test_engine import TestEngine
-from .api_server import app
+from core.src.messaging.control_plane import BaseControlPlane
+from qa_spoke import QASpoke
+from test_engine import TestEngine
+from api_server import app
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("QA_Main")
