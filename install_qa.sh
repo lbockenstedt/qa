@@ -13,7 +13,7 @@ set -euo pipefail
 # ============================================================
 
 HUB_URL="ws://localhost:8765"
-SPOKE_ID="qa-spoke-1"
+SPOKE_ID="${SPOKE_ID:-qa-$(hostname -s)}"
 SPOKE_SECRET=""
 HUB_SECRET=""
 ADMIN_TOKEN=""
