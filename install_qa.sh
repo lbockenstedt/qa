@@ -44,6 +44,15 @@ done
 ADMIN_TOKEN="${ADMIN_TOKEN:-${LM_ADMIN_TOKEN:-}}"
 [ "$(id -u)" -eq 0 ] || { echo "❌ Must be run as root."; exit 1; }
 
+# A successful install chowns $LM_DIR/qa to $SVC_USER (see chown -R near the end
+# of this script), but every run — including re-runs/updates — executes entirely
+# as root. Root then running `git pull`/`git clone` against a directory owned by
+# a different user trips git's dubious-ownership safety check (CVE-2022-24765
+# mitigation): "fatal: detected dubious ownership in repository at ...".
+# Whitelist the path up front so clone/pull always work regardless of who
+# currently owns it.
+git config --global --add safe.directory "$LM_DIR/qa" 2>/dev/null || true
+
 GRN='\033[0;32m'; YLW='\033[1;33m'; NC='\033[0m'
 ok()   { echo -e "${GRN}✅  $*${NC}"; }
 warn() { echo -e "${YLW}⚠️   $*${NC}"; }
