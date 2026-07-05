@@ -26,7 +26,28 @@ except ImportError:
                         if log_file else None)
             logging.basicConfig(level=default_level, force=True,
                                  format=_FMT, datefmt=_DFMT, handlers=handlers)
-configure_logging()
+
+
+def _resolve_log_file(name: str):
+    """Canonical /var/log/lm/<name>.log if writable, else a local logs/ fallback,
+    else None (stderr only)."""
+    import os
+    primary = f"/var/log/lm/{name}.log"
+    try:
+        os.makedirs("/var/log/lm", exist_ok=True)
+        with open(primary, "a"):
+            pass
+        return primary
+    except OSError:
+        try:
+            local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+            os.makedirs(local, exist_ok=True)
+            return os.path.join(local, f"{name}.log")
+        except OSError:
+            return None
+
+
+configure_logging(log_file=_resolve_log_file("qa"))
 logger = logging.getLogger("QA_Main")
 
 def run_api_server():
