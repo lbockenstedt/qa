@@ -50,6 +50,12 @@ def _resolve_log_file(name: str):
 configure_logging(log_file=_resolve_log_file("qa"))
 logger = logging.getLogger("QA_Main")
 
+
+def normalize_hub_host(hub: str) -> str:
+    raw = (hub or "localhost").strip()
+    without_scheme = raw.split("://", 1)[1] if "://" in raw else raw
+    return without_scheme.split(":", 1)[0] or "localhost"
+
 def run_api_server():
     """Runs the FastAPI server in a background thread."""
     config = uvicorn.Config(app, host="0.0.0.0", port=8080, log_level="info")
@@ -84,11 +90,12 @@ async def main():
     parser.add_argument("--password", default="password", help="WebUI password")
 
     args = parser.parse_args()
+    hub_host = normalize_hub_host(args.hub)
 
     # 1. Handle Secret Onboarding
     secret = args.secret
     if not secret:
-        secret = await fetch_first_secret(args.hub, args.spoke_id)
+        secret = await fetch_first_secret(hub_host, args.spoke_id)
         if not secret:
             logger.error("Could not obtain secret. Exiting.")
             return
@@ -103,7 +110,7 @@ async def main():
     plane = BaseControlPlane(
         spoke_id=args.spoke_id,
         secret=secret,
-        hub_url=f"ws://{args.hub}:8765"
+        hub_url=f"ws://{hub_host}:8765"
     )
 
     # 4. Create and Register the QA Spoke
@@ -115,7 +122,7 @@ async def main():
     # We instantiate it and inject it into the spoke.
     webui_creds = {"username": args.user, "password": args.password}
     engine = TestEngine(
-        hub_host=args.hub,
+        hub_host=hub_host,
         spoke_id=args.spoke_id,
         secret=secret,
         webui_creds=webui_creds
