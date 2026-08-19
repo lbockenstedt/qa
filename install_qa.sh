@@ -19,7 +19,7 @@ HUB_SECRET=""
 ADMIN_TOKEN=""
 LM_USER="admin"
 LM_PASSWORD=""
-BUGFIXER_URL=""
+AB_URL=""
 QA_API_PORT="8090"
 SVC_USER="svc_lm"
 LM_DIR="/opt/lm"
@@ -33,7 +33,7 @@ while [[ "$#" -gt 0 ]]; do
         --admin-token)   ADMIN_TOKEN="$2";   shift ;;
         --user)          LM_USER="$2";       shift ;;
         --password)      LM_PASSWORD="$2";   shift ;;
-        --bugfixer)      BUGFIXER_URL="$2";  shift ;;
+        --ab)      AB_URL="$2";  shift ;;
         --api-port)      QA_API_PORT="$2";   shift ;;
         --all-prereqs)   ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
@@ -129,7 +129,7 @@ SPOKE_SECRET=$SPOKE_SECRET
 HUB_SECRET=${HUB_SECRET:-}
 LM_USER=${LM_USER:-admin}
 LM_PASSWORD=${LM_PASSWORD:-}
-BUGFIXER_URL=${BUGFIXER_URL:-}
+AB_URL=${AB_URL:-}
 QA_API_PORT=${QA_API_PORT:-8090}
 DOTENV
 chmod 600 "$LM_DIR/qa/.env"

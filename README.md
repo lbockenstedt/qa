@@ -22,10 +22,10 @@ curl -sSL https://raw.githubusercontent.com/lbockenstedt/qa/main/install_qa.sh \
 | `--admin-token` | Hub admin token. |
 | `--user` | LM username the QA runner logs in as. |
 | `--password` | Password for that user. |
-| `--bugfixer URL` | BugFixer base URL, for filing what QA finds. |
+| `--ab URL` | AppBuilder base URL, for filing what QA finds. |
 | `--api-port` | Port the QA API listens on. |
 | `--all-prereqs` | Accepted and ignored. |
 
 **Environment overrides:** `SPOKE_ID`, `HUB_SECRET`, `ADMIN_TOKEN`, `LM_USER`,
-`LM_PASSWORD`, `BUGFIXER_URL`, `QA_API_PORT`.
+`LM_PASSWORD`, `AB_URL`, `QA_API_PORT`.
 <!-- INSTALLERS:END -->

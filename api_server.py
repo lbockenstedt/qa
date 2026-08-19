@@ -8,7 +8,7 @@ from typing import Optional, List
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("QA_API")
 
-app = FastAPI(title="BugFixer QA Service")
+app = FastAPI(title="AppBuilder QA Service")
 
 # ---------------------------------------------------------------------------
 # Session state
@@ -104,7 +104,7 @@ async def trigger_run(request_data: dict = None, background_tasks: BackgroundTas
 
     Body (optional JSON): {"module": "opnsense"}
     If module is omitted, the full suite runs.
-    Called by BugFixer after applying a fix to verify nothing regressed.
+    Called by AppBuilder after applying a fix to verify nothing regressed.
     """
     if session.status == "RUNNING":
         return JSONResponse(

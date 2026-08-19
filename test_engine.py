@@ -28,16 +28,16 @@ class TestScenario:
 class TestEngine:
     """
     Orchestrates QA scenarios against the Lab Manager ecosystem.
-    Supports full-suite runs and targeted single-module runs triggered by BugFixer.
+    Supports full-suite runs and targeted single-module runs triggered by AppBuilder.
     """
     def __init__(self, hub_host: str, spoke_id: str, secret: str, webui_creds: dict,
-                 bugfixer_url: str = None):
+                 ab_url: str = None):
         self.hub_host = hub_host
         self.spoke_id = spoke_id
         self.secret = secret
         self.webui_client = WebUIClient(hub_host)
         self.creds = webui_creds
-        self.bugfixer_url = (bugfixer_url or "").rstrip("/")
+        self.ab_url = (ab_url or "").rstrip("/")
         self.results = []
         self.hub_client = HubClient(hub_host, spoke_id=spoke_id, secret=secret)
 
@@ -62,10 +62,10 @@ class TestEngine:
             TestScenario("LDAP: User Search",               self.test_ldap_user_search,  ["ldap"]),
             TestScenario("LDAP: Group Membership",          self.test_ldap_group_membership, ["ldap"]),
 
-            # ── Tier 4: BugFixer Pipeline ─────────────────────────────────────
-            TestScenario("BugFixer: Health Check",          self.test_bugfixer_health,   ["bugfixer"]),
-            TestScenario("BugFixer: Dashboard Reachable",   self.test_bugfixer_dashboard, ["bugfixer"]),
-            TestScenario("BugFixer: Provider Configured",   self.test_bugfixer_providers, ["bugfixer"]),
+            # ── Tier 4: AppBuilder Pipeline ─────────────────────────────────────
+            TestScenario("AppBuilder: Health Check",          self.test_ab_health,   ["ab"]),
+            TestScenario("AppBuilder: Dashboard Reachable",   self.test_ab_dashboard, ["ab"]),
+            TestScenario("AppBuilder: Provider Configured",   self.test_ab_providers, ["ab"]),
 
             # ── Tier 5: WebUI Smoke ───────────────────────────────────────────
             TestScenario("UI: Login & Dashboard",           self.test_webui_smoke),
@@ -242,40 +242,40 @@ class TestEngine:
         api_server.log_event(f"  LDAP group membership: {'OK' if ok else 'FAIL'}", "INFO")
         return ok
 
-    # ── Tier 4: BugFixer ─────────────────────────────────────────────────────
+    # ── Tier 4: AppBuilder ─────────────────────────────────────────────────────
 
     async def _bf_get(self, path: str, timeout: float = 10) -> dict:
-        if not self.bugfixer_url:
-            return {"status": "ERROR", "detail": "BUGFIXER_URL not configured"}
+        if not self.ab_url:
+            return {"status": "ERROR", "detail": "AB_URL not configured"}
         try:
             async with httpx.AsyncClient(timeout=timeout) as c:
-                r = await c.get(f"{self.bugfixer_url}{path}")
+                r = await c.get(f"{self.ab_url}{path}")
                 r.raise_for_status()
                 return r.json()
         except Exception as e:
             return {"status": "ERROR", "detail": str(e)}
 
-    async def test_bugfixer_health(self) -> bool:
+    async def test_ab_health(self) -> bool:
         res = await self._bf_get("/api/state")
         ok = "status" in res and res.get("status") != "ERROR"
-        api_server.log_event(f"  BugFixer health: {'OK' if ok else 'FAIL — ' + res.get('detail','')}", "INFO")
+        api_server.log_event(f"  AppBuilder health: {'OK' if ok else 'FAIL — ' + res.get('detail','')}", "INFO")
         return ok
 
-    async def test_bugfixer_dashboard(self) -> bool:
-        if not self.bugfixer_url:
-            api_server.log_event("  BugFixer URL not set — skipping dashboard check", "INFO")
+    async def test_ab_dashboard(self) -> bool:
+        if not self.ab_url:
+            api_server.log_event("  AppBuilder URL not set — skipping dashboard check", "INFO")
             return True
         try:
             async with httpx.AsyncClient(timeout=10) as c:
-                r = await c.get(self.bugfixer_url + "/")
+                r = await c.get(self.ab_url + "/")
                 ok = r.status_code == 200
-                api_server.log_event(f"  BugFixer dashboard HTTP {r.status_code}: {'OK' if ok else 'FAIL'}", "INFO")
+                api_server.log_event(f"  AppBuilder dashboard HTTP {r.status_code}: {'OK' if ok else 'FAIL'}", "INFO")
                 return ok
         except Exception as e:
-            api_server.log_event(f"  BugFixer dashboard unreachable: {e}", "ERROR")
+            api_server.log_event(f"  AppBuilder dashboard unreachable: {e}", "ERROR")
             return False
 
-    async def test_bugfixer_providers(self) -> bool:
+    async def test_ab_providers(self) -> bool:
         res = await self._bf_get("/api/llm/config")
         configured = any(
             slot.get("model") for slot in (res.get("slots") or {}).values()
@@ -284,7 +284,7 @@ class TestEngine:
             # Fallback: check state for provider_N_configured flags
             state = await self._bf_get("/api/state")
             configured = any(state.get(f"provider_{n}_configured") for n in (1, 2, 3, 4))
-        api_server.log_event(f"  BugFixer providers: {'at least one configured' if configured else 'NONE configured'}", "INFO")
+        api_server.log_event(f"  AppBuilder providers: {'at least one configured' if configured else 'NONE configured'}", "INFO")
         return configured
 
     # ── Tier 5: WebUI Smoke ───────────────────────────────────────────────────

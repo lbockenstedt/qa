@@ -65,11 +65,11 @@ class QAControlPlane(BaseControlPlane):
 
     def __init__(self, spoke_id: str, secret: str, hub_secret: str = None,
                  hub_url: str = None, webui_creds: dict = None,
-                 bugfixer_url: str = None, api_port: int = 8090):
+                 ab_url: str = None, api_port: int = 8090):
         super().__init__(spoke_id, secret, hub_secret, hub_url)
         self.module_type = "qa"
         self.webui_creds = webui_creds or {"username": "admin", "password": "password"}
-        self.bugfixer_url = bugfixer_url or ""
+        self.ab_url = ab_url or ""
         self.api_port = api_port
 
     def get_service_name(self) -> str:
@@ -98,7 +98,7 @@ class QAControlPlane(BaseControlPlane):
             spoke_id=self.spoke_id,
             secret=self.secret,
             webui_creds=self.webui_creds,
-            bugfixer_url=self.bugfixer_url,
+            ab_url=self.ab_url,
         )
         await qa_spoke.set_engine(engine)
         set_engine(engine)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--hub",        default=os.getenv("HUB_URL", "ws://localhost:8765"))
     parser.add_argument("--user",       default=os.getenv("LM_USER", "admin"))
     parser.add_argument("--password",   default=os.getenv("LM_PASSWORD", "password"))
-    parser.add_argument("--bugfixer",   default=os.getenv("BUGFIXER_URL", ""))
+    parser.add_argument("--ab",   default=os.getenv("AB_URL", ""))
     parser.add_argument("--api-port",   type=int, default=int(os.getenv("QA_API_PORT", "8090")))
     args = parser.parse_args()
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         hub_secret=args.hub_secret,
         hub_url=args.hub,
         webui_creds={"username": args.user, "password": args.password},
-        bugfixer_url=args.bugfixer,
+        ab_url=args.ab,
         api_port=args.api_port,
     )
     asyncio.run(cp.run())
