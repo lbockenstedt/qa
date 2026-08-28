@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from core.src.messaging.control_plane import BaseControlPlane
 from qa_spoke import QASpoke
-from test_engine import TestEngine
+from qa_engine import TestEngine
 from api_server import app, set_engine
 
 # Shared logging setup + a canonical local file log (contract req 6 +

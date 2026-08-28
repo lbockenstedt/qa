@@ -53,7 +53,7 @@ class TestSession:
 
 session = TestSession()
 
-# Keep backward-compatible module-level helpers used by test_engine.py
+# Keep backward-compatible module-level helpers used by qa_engine.py
 def log_event(message: str, level: str = "INFO"):
     session.log(message, level)
 

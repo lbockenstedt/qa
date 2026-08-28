@@ -46,4 +46,4 @@ jobs:
       - name: Run tests
         env:
           PYTHONPATH: ${{ github.workspace }}/_lm:${{ github.workspace }}/_lm/core/src
-        run: pytest -q . --ignore=_lm
+        run: pytest -q tests
