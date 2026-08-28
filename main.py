@@ -7,7 +7,7 @@ import uvicorn
 from fastapi import FastAPI
 from core.src.messaging.control_plane import BaseControlPlane
 from qa_spoke import QASpoke
-from test_engine import TestEngine
+from qa_engine import TestEngine
 from api_server import app
 
 # Shared logging setup (standard format + LOG_LEVEL env) so every module logs
