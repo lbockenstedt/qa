@@ -1,5 +1,5 @@
 from core.src.base_spoke import BaseSpoke
-from test_engine import TestEngine
+from qa_engine import TestEngine
 import logging
 
 logger = logging.getLogger("QASpoke")
