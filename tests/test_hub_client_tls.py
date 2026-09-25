@@ -13,6 +13,7 @@ so an asyncio marker would silently skip awaiting the coroutine and the test
 would pass regardless of what connect() actually does.
 """
 import asyncio
+import json
 import ssl
 from unittest.mock import AsyncMock, patch
 
@@ -54,7 +55,8 @@ def test_insecure_ws_with_opt_in_connects_and_warns(monkeypatch, caplog):
     args, kwargs = mock_connect.call_args
     assert args[0].startswith("ws://")
     assert kwargs.get("ssl") is None
-    mock_ws.send.assert_any_call('{"spoke_id": "qa-1", "secret": "s3cret"}')
+    sent_payloads = [json.loads(c.args[0]) for c in mock_ws.send.call_args_list if c.args and isinstance(c.args[0], str)]
+    assert {"spoke_id": "qa-1", "secret": "s3cret"} in sent_payloads
     assert any(INSECURE_WS_ENV in record.message for record in caplog.records
                if record.levelname == "WARNING")
 
@@ -73,4 +75,5 @@ def test_secure_default_connects_wss_with_verification(monkeypatch):
     assert args[0].startswith("wss://")
     assert isinstance(kwargs.get("ssl"), ssl.SSLContext)
     assert kwargs["ssl"].verify_mode == ssl.CERT_REQUIRED
-    mock_ws.send.assert_any_call('{"spoke_id": "qa-1", "secret": "s3cret"}')
+    sent_payloads = [json.loads(c.args[0]) for c in mock_ws.send.call_args_list if c.args and isinstance(c.args[0], str)]
+    assert {"spoke_id": "qa-1", "secret": "s3cret"} in sent_payloads

@@ -7,7 +7,9 @@ import uvicorn
 from pathlib import Path
 from dotenv import load_dotenv
 
+import ssl
 from core.src.messaging.control_plane import BaseControlPlane
+from hub_client import INSECURE_WS_ENV
 from qa_spoke import QASpoke
 from qa_engine import TestEngine
 from api_server import app, set_engine
@@ -95,6 +97,16 @@ class QAControlPlane(BaseControlPlane):
         insecure = bool(self.hub_url) and self.hub_url.strip().lower().startswith("ws://")
         hub_host = (self.hub_url.replace("wss://", "").replace("ws://", "").split(":")[0]
                     if self.hub_url else "localhost")
+
+        # Guard the control plane's own WebSocket connection against cleartext secret exposure
+        if insecure and os.getenv(INSECURE_WS_ENV) != "1":
+            raise ConnectionError(
+                "Refusing to connect control plane to hub over plaintext ws:// — this would "
+                f"send the shared secret in cleartext. Set {INSECURE_WS_ENV}=1 "
+                "to allow this for local development."
+            )
+        if self.tls_ca_bundle:
+            os.environ.setdefault("SSL_CERT_FILE", self.tls_ca_bundle)
 
         qa_spoke = QASpoke(self.spoke_id, {})
         self.register_module("qa", qa_spoke)

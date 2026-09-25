@@ -7,6 +7,7 @@ import httpx
 import uvicorn
 from fastapi import FastAPI
 from core.src.messaging.control_plane import BaseControlPlane
+from hub_client import INSECURE_WS_ENV
 from qa_spoke import QASpoke
 from qa_engine import TestEngine
 from api_server import app
@@ -97,6 +98,15 @@ async def main():
     # hostname (the default) defaults to the secure wss:// path.
     insecure = args.hub.strip().lower().startswith("ws://")
     hub_host = normalize_hub_host(args.hub)
+
+    if insecure and os.getenv(INSECURE_WS_ENV) != "1":
+        raise ConnectionError(
+            "Refusing to connect control plane to hub over plaintext ws:// — this would "
+            f"send the shared secret in cleartext. Set {INSECURE_WS_ENV}=1 "
+            "to allow this for local development."
+        )
+    if args.tls_ca_cert:
+        os.environ.setdefault("SSL_CERT_FILE", args.tls_ca_cert)
 
     # 1. Handle Secret Onboarding
     secret = args.secret
