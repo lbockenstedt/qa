@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import ssl
 import uuid
 import time
 import hmac
@@ -12,19 +14,28 @@ from typing import Dict, Any, Optional
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("HubClient")
 
+# Local-dev escape hatch for a plaintext ws:// hub. Must be set explicitly;
+# a configured wss:// URL is never downgraded by this variable.
+INSECURE_WS_ENV = "QA_ALLOW_INSECURE_WS"
+
 class HubClient:
     """
     Dual-mode client for interacting with the Lab Manager Hub.
     Supports REST API for diagnostics and WebSocket for 'Ghost Tenant' interactions.
     """
     def __init__(self, hub_host: str, hub_port: int = 8000, ws_port: int = 8765,
-                 spoke_id: Optional[str] = None, secret: Optional[str] = None):
+                 spoke_id: Optional[str] = None, secret: Optional[str] = None,
+                 insecure: bool = False, tls_ca_bundle: Optional[str] = None):
         self.hub_host = hub_host
         self.hub_port = hub_port
         self.ws_port = ws_port
         self.spoke_id = spoke_id
         self.secret = secret
         self.ws = None
+        # True only when the caller resolved the configured hub URL scheme to
+        # plaintext ws://. Never set based on this client's own defaults.
+        self.insecure = insecure
+        self.tls_ca_bundle = tls_ca_bundle
 
     # --- REST API Methods ---
 
@@ -55,14 +66,41 @@ class HubClient:
         message_bytes = json.dumps(data, sort_keys=True, separators=(',', ':')).encode()
         return hmac.new(self.secret.encode(), message_bytes, hashlib.sha256).hexdigest()
 
+    def _build_ws_url(self) -> str:
+        scheme = "ws" if self.insecure else "wss"
+        return f"{scheme}://{self.hub_host}:{self.ws_port}"
+
+    def _get_ssl_context(self) -> Optional[ssl.SSLContext]:
+        """None for plaintext ws://; otherwise a verifying context (default
+        trust store, or the configured CA bundle for a self-signed hub)."""
+        if self.insecure:
+            return None
+        if self.tls_ca_bundle:
+            return ssl.create_default_context(cafile=self.tls_ca_bundle)
+        return ssl.create_default_context()
+
     async def connect(self):
         """Performs the authentication handshake and maintains the connection."""
         if not self.spoke_id or not self.secret:
             raise ValueError("spoke_id and secret are required for WebSocket connectivity.")
 
-        url = f"ws://{self.hub_host}:{self.ws_port}"
+        # Refuse to send the shared secret over a plaintext connection unless
+        # the operator has explicitly opted in for local development.
+        if self.insecure:
+            if os.getenv(INSECURE_WS_ENV) != "1":
+                raise ConnectionError(
+                    "Refusing to connect to hub over plaintext ws:// — this would "
+                    f"send the shared secret in cleartext. Set {INSECURE_WS_ENV}=1 "
+                    "to allow this for local development."
+                )
+            logger.warning(
+                f"{INSECURE_WS_ENV}=1 is set — connecting over plaintext ws://. "
+                "The shared secret will be sent unencrypted. Do not use in production."
+            )
+
+        url = self._build_ws_url()
         try:
-            self.ws = await websockets.connect(url)
+            self.ws = await websockets.connect(url, ssl=self._get_ssl_context())
 
             # 1. Send Authentication Request
             auth_req = {

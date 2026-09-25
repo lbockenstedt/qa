@@ -9,10 +9,10 @@ set -euo pipefail
 #
 # Usage:
 #   curl -sSL https://raw.githubusercontent.com/lbockenstedt/qa/main/install_qa.sh \
-#     | sudo bash -s -- --hub ws://HUB_IP:8765 --admin-token LM_ADMIN_TOKEN
+#     | sudo bash -s -- --hub wss://HUB_IP:8765 --admin-token LM_ADMIN_TOKEN
 # ============================================================
 
-HUB_URL="ws://localhost:8765"
+HUB_URL="wss://localhost:8765"
 SPOKE_ID="${SPOKE_ID:-qa-$(hostname -s)}"
 SPOKE_SECRET=""
 HUB_SECRET=""

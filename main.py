@@ -1,6 +1,7 @@
 import asyncio
 import argparse
 import logging
+import os
 import threading
 import httpx
 import uvicorn
@@ -88,8 +89,13 @@ async def main():
     parser.add_argument("--secret", help="Shared secret (optional, will fetch from Hub if missing)")
     parser.add_argument("--user", default="admin", help="WebUI username")
     parser.add_argument("--password", default="password", help="WebUI password")
+    parser.add_argument("--tls-ca-cert", default=os.getenv("QA_HUB_CA_CERT"),
+                         help="CA bundle for a self-signed hub certificate")
 
     args = parser.parse_args()
+    # Only an explicit ws:// in --hub marks the connection insecure; a bare
+    # hostname (the default) defaults to the secure wss:// path.
+    insecure = args.hub.strip().lower().startswith("ws://")
     hub_host = normalize_hub_host(args.hub)
 
     # 1. Handle Secret Onboarding
@@ -110,7 +116,7 @@ async def main():
     plane = BaseControlPlane(
         spoke_id=args.spoke_id,
         secret=secret,
-        hub_url=f"ws://{hub_host}:8765"
+        hub_url=f"{'ws' if insecure else 'wss'}://{hub_host}:8765"
     )
 
     # 4. Create and Register the QA Spoke
@@ -125,7 +131,9 @@ async def main():
         hub_host=hub_host,
         spoke_id=args.spoke_id,
         secret=secret,
-        webui_creds=webui_creds
+        webui_creds=webui_creds,
+        insecure=insecure,
+        tls_ca_bundle=args.tls_ca_cert,
     )
     await qa_spoke.set_engine(engine)
 

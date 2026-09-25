@@ -31,7 +31,7 @@ class TestEngine:
     Supports full-suite runs and targeted single-module runs triggered by AppBuilder.
     """
     def __init__(self, hub_host: str, spoke_id: str, secret: str, webui_creds: dict,
-                 ab_url: str = None):
+                 ab_url: str = None, insecure: bool = False, tls_ca_bundle: str = None):
         self.hub_host = hub_host
         self.spoke_id = spoke_id
         self.secret = secret
@@ -39,7 +39,8 @@ class TestEngine:
         self.creds = webui_creds
         self.ab_url = (ab_url or "").rstrip("/")
         self.results = []
-        self.hub_client = HubClient(hub_host, spoke_id=spoke_id, secret=secret)
+        self.hub_client = HubClient(hub_host, spoke_id=spoke_id, secret=secret,
+                                     insecure=insecure, tls_ca_bundle=tls_ca_bundle)
 
     def _all_scenarios(self) -> list:
         return [
