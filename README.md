@@ -74,12 +74,13 @@ curl -sSL https://raw.githubusercontent.com/lbockenstedt/qa/main/install_qa.sh \
 | `--all-prereqs` | Accepted and ignored. |
 
 > **Upgrading from a pre-TLS install.** The spoke now connects over `wss://`
-> with certificate verification and **refuses to send its secret over plaintext
-> `ws://`**, so an existing install pointed at a plaintext hub will fail to
-> connect until you either point it at a TLS listener or re-run the installer
-> with `--insecure-ws`. For the fleet's self-signed hub certificate, pass
-> `--tls-ca-cert /path/to/ca.pem` — set it at install time rather than by
-> hand-editing `.env`.
+> and **refuses to send its secret over plaintext `ws://`**, so an existing
+> install pointed at a plaintext hub will fail to connect until you either
+> point it at a TLS listener or re-run the installer with `--insecure-ws`.
+> HubClient connects with certificate verification by default; for the fleet's
+> self-signed hub certificate, pass `--tls-ca-cert /path/to/ca.pem` to also
+> authenticate the hub on core's control-plane connection — set it at install
+> time rather than by hand-editing `.env`.
 
 **Environment overrides:** `SPOKE_ID`, `HUB_SECRET`, `ADMIN_TOKEN`, `LM_USER`,
 `LM_PASSWORD`, `AB_URL`, `QA_API_PORT`.

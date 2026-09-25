@@ -80,24 +80,17 @@ class QAControlPlane(BaseControlPlane):
     async def run(self):
         logger.info(f"Starting QA Auditor → {self.hub_url}")
 
-        # FastAPI sidecar in a background thread
-        def _run_api():
-            cfg = uvicorn.Config(app, host="0.0.0.0", port=self.api_port, log_level="warning")
-            uvicorn.Server(cfg).run()
-
-        t = threading.Thread(target=_run_api, daemon=True)
-        t.start()
-        logger.info(f"QA WebUI listening on :{self.api_port}")
-
         # Preserve the configured scheme before stripping it for the bare
         # hostname the WebSocket/REST clients expect. Only an explicit ws://
         # in self.hub_url marks the connection insecure — a missing hub_url
         # defaults to the secure wss:// path.
         insecure = bool(self.hub_url) and self.hub_url.strip().lower().startswith("ws://")
-        hub_host = (self.hub_url.replace("wss://", "").replace("ws://", "").split(":")[0]
-                    if self.hub_url else "localhost")
+        raw_url = self.hub_url.strip() if self.hub_url else "localhost"
+        without_scheme = raw_url.split("://", 1)[1] if "://" in raw_url else raw_url
+        hub_host = without_scheme.split(":", 1)[0] or "localhost"
 
         # Guard the control plane's own WebSocket connection against cleartext secret exposure
+        # before starting background services.
         if insecure and os.getenv(INSECURE_WS_ENV) != "1":
             raise ConnectionError(
                 "Refusing to connect control plane to hub over plaintext ws:// — this would "
@@ -106,6 +99,20 @@ class QAControlPlane(BaseControlPlane):
             )
         if self.tls_ca_bundle:
             _pin_hub_ca(self.tls_ca_bundle)
+        elif not insecure:
+            logger.warning(
+                "Connecting over wss:// without a CA certificate: core control plane "
+                "connection will not verify the hub certificate (LM_HUB_TLS_VERIFY=0)."
+            )
+
+        # FastAPI sidecar in a background thread
+        def _run_api():
+            cfg = uvicorn.Config(app, host="0.0.0.0", port=self.api_port, log_level="warning")
+            uvicorn.Server(cfg).run()
+
+        t = threading.Thread(target=_run_api, daemon=True)
+        t.start()
+        logger.info(f"QA WebUI listening on :{self.api_port}")
 
         qa_spoke = QASpoke(self.spoke_id, {})
         self.register_module("qa", qa_spoke)

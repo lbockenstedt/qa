@@ -107,6 +107,11 @@ async def main():
         )
     if args.tls_ca_cert:
         _pin_hub_ca(args.tls_ca_cert)
+    elif not insecure:
+        logger.warning(
+            "Connecting over wss:// without a CA certificate: core control plane "
+            "connection will not verify the hub certificate (LM_HUB_TLS_VERIFY=0)."
+        )
 
     # 1. Handle Secret Onboarding
     secret = args.secret

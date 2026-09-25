@@ -2,7 +2,7 @@
 
 The QA spoke dials the hub twice: through HubClient (this repo) and through
 core's BaseControlPlane. Only the first builds its ssl context from the path
-we hold. BaseControlPlane builds its own from LM_HUB_CA_CERT / LM_HUB_BUNDLE,
+we hold. BaseControlPlane builds its own from LM_HUB_CA_CERT / LM_HUB_CA_BUNDLE,
 gated on LM_HUB_TLS_VERIFY, and never consults SSL_CERT_FILE
 (core/src/messaging/control_plane.py, _client_ssl_ctx).
 
@@ -46,9 +46,12 @@ def test_explicit_path_overrides_an_inherited_one(monkeypatch):
     assert os.environ[HUB_CA_ENV] == "/etc/ssl/hub-ca.pem"
 
 
-def test_still_sets_ssl_cert_file_for_stdlib_clients():
+def test_does_not_override_ssl_cert_file_for_other_clients():
+    """SSL_CERT_FILE must not be set process-wide: doing so forces other HTTP
+    clients (such as httpx communicating with AppBuilder) to trust only the
+    hub CA and breaks connections signed by public CAs."""
     _pin_hub_ca("/etc/ssl/hub-ca.pem")
-    assert os.environ["SSL_CERT_FILE"] == "/etc/ssl/hub-ca.pem"
+    assert "SSL_CERT_FILE" not in os.environ
 
 
 def test_no_ca_is_a_no_op():

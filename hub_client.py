@@ -21,7 +21,7 @@ INSECURE_WS_ENV = "QA_ALLOW_INSECURE_WS"
 # The CA bundle has to reach TWO different clients, and they do not read the
 # same thing. HubClient (below) builds its own ssl context from the path, but
 # the spoke ALSO dials the hub through core's BaseControlPlane, and that one
-# builds its context from LM_HUB_CA_CERT / LM_HUB_BUNDLE with verification
+# builds its context from LM_HUB_CA_CERT / LM_HUB_CA_BUNDLE with verification
 # gated behind LM_HUB_TLS_VERIFY (see core/src/messaging/control_plane.py
 # _client_ssl_ctx). It never consults SSL_CERT_FILE, so setting that alone
 # left the control-plane connection unpinned.
@@ -42,9 +42,6 @@ def _pin_hub_ca(ca_path):
         return
     os.environ[HUB_CA_ENV] = ca_path
     os.environ[HUB_TLS_VERIFY_ENV] = "1"
-    # Kept for any stdlib client that builds a default context from the
-    # environment; harmless, and no longer the only thing being set.
-    os.environ.setdefault("SSL_CERT_FILE", ca_path)
 
 
 class HubClient:
