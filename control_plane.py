@@ -7,7 +7,6 @@ import uvicorn
 from pathlib import Path
 from dotenv import load_dotenv
 
-import ssl
 from core.src.messaging.control_plane import BaseControlPlane
 from hub_client import INSECURE_WS_ENV
 from qa_spoke import QASpoke
