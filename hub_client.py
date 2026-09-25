@@ -18,6 +18,35 @@ logger = logging.getLogger("HubClient")
 # a configured wss:// URL is never downgraded by this variable.
 INSECURE_WS_ENV = "QA_ALLOW_INSECURE_WS"
 
+# The CA bundle has to reach TWO different clients, and they do not read the
+# same thing. HubClient (below) builds its own ssl context from the path, but
+# the spoke ALSO dials the hub through core's BaseControlPlane, and that one
+# builds its context from LM_HUB_CA_CERT / LM_HUB_BUNDLE with verification
+# gated behind LM_HUB_TLS_VERIFY (see core/src/messaging/control_plane.py
+# _client_ssl_ctx). It never consults SSL_CERT_FILE, so setting that alone
+# left the control-plane connection unpinned.
+HUB_CA_ENV = "LM_HUB_CA_CERT"
+HUB_TLS_VERIFY_ENV = "LM_HUB_TLS_VERIFY"
+
+
+def _pin_hub_ca(ca_path):
+    """Point every hub client at ``ca_path`` as the trust anchor.
+
+    Uses assignment rather than ``setdefault``: an inherited LM_HUB_CA_CERT
+    from the surrounding environment must not silently win over the path the
+    operator passed on the command line. Also turns verification ON, since
+    core defaults it OFF and would otherwise encrypt without authenticating
+    the hub even though a CA was supplied.
+    """
+    if not ca_path:
+        return
+    os.environ[HUB_CA_ENV] = ca_path
+    os.environ[HUB_TLS_VERIFY_ENV] = "1"
+    # Kept for any stdlib client that builds a default context from the
+    # environment; harmless, and no longer the only thing being set.
+    os.environ.setdefault("SSL_CERT_FILE", ca_path)
+
+
 class HubClient:
     """
     Dual-mode client for interacting with the Lab Manager Hub.

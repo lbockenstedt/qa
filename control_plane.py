@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from core.src.messaging.control_plane import BaseControlPlane
-from hub_client import INSECURE_WS_ENV
+from hub_client import INSECURE_WS_ENV, _pin_hub_ca
 from qa_spoke import QASpoke
 from qa_engine import TestEngine
 from api_server import app, set_engine
@@ -105,7 +105,7 @@ class QAControlPlane(BaseControlPlane):
                 "to allow this for local development."
             )
         if self.tls_ca_bundle:
-            os.environ.setdefault("SSL_CERT_FILE", self.tls_ca_bundle)
+            _pin_hub_ca(self.tls_ca_bundle)
 
         qa_spoke = QASpoke(self.spoke_id, {})
         self.register_module("qa", qa_spoke)

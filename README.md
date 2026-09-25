@@ -61,7 +61,7 @@ curl -sSL https://raw.githubusercontent.com/lbockenstedt/qa/main/install_qa.sh \
 | Flag | Purpose |
 | :--- | :--- |
 | `--hub URL` | Hub WebSocket URL, default `wss://localhost:8765`. **Pass a full `ws://`/`wss://` URL** — this installer does not normalize a bare hostname. A `ws://` URL is **refused** unless `--insecure-ws` is passed. |
-| `--tls-ca-cert PATH` | CA bundle used to verify a self-signed hub certificate. Written to `.env` as `QA_HUB_CA_CERT`. |
+| `--tls-ca-cert PATH` | CA bundle used to verify a self-signed hub certificate. Written to `.env` as `QA_HUB_CA_CERT`, and exported to core as `LM_HUB_CA_CERT` with `LM_HUB_TLS_VERIFY=1` so the control-plane connection authenticates the hub too. |
 | `--insecure-ws` | Allow a plaintext `ws://` hub URL. Sends the spoke secret unencrypted — lab use only. |
 | `--id`, `--name` | Pin the spoke id. |
 | `--secret` | Pre-shared spoke secret. |

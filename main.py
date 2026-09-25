@@ -7,7 +7,7 @@ import httpx
 import uvicorn
 from fastapi import FastAPI
 from core.src.messaging.control_plane import BaseControlPlane
-from hub_client import INSECURE_WS_ENV
+from hub_client import INSECURE_WS_ENV, _pin_hub_ca
 from qa_spoke import QASpoke
 from qa_engine import TestEngine
 from api_server import app
@@ -106,7 +106,7 @@ async def main():
             "to allow this for local development."
         )
     if args.tls_ca_cert:
-        os.environ.setdefault("SSL_CERT_FILE", args.tls_ca_cert)
+        _pin_hub_ca(args.tls_ca_cert)
 
     # 1. Handle Secret Onboarding
     secret = args.secret
