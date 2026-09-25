@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from core.src.messaging.control_plane import BaseControlPlane
-from hub_client import INSECURE_WS_ENV, _pin_hub_ca
+from hub_client import HUB_TLS_VERIFY_ENV, INSECURE_WS_ENV, _pin_hub_ca
 from qa_spoke import QASpoke
 from qa_engine import TestEngine
 from api_server import app, set_engine
@@ -67,6 +67,8 @@ class QAControlPlane(BaseControlPlane):
     def __init__(self, spoke_id: str, secret: str, hub_secret: str = None,
                  hub_url: str = None, webui_creds: dict = None,
                  ab_url: str = None, api_port: int = 8090, tls_ca_bundle: str = None):
+        if tls_ca_bundle:
+            _pin_hub_ca(tls_ca_bundle)
         super().__init__(spoke_id, secret, hub_secret, hub_url)
         self.module_type = "qa"
         self.webui_creds = webui_creds or {"username": "admin", "password": "password"}
@@ -99,7 +101,7 @@ class QAControlPlane(BaseControlPlane):
             )
         if self.tls_ca_bundle:
             _pin_hub_ca(self.tls_ca_bundle)
-        elif not insecure:
+        elif not insecure and os.getenv(HUB_TLS_VERIFY_ENV) != "1":
             logger.warning(
                 "Connecting over wss:// without a CA certificate: core control plane "
                 "connection will not verify the hub certificate (LM_HUB_TLS_VERIFY=0)."
