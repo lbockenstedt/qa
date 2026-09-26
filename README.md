@@ -43,7 +43,7 @@ The QA REST API runs by default on port `8080`:
 | `GET` | `/health` | Service health status and current engine state |
 | `GET` | `/session` | Current test session state, logs, and results |
 | `POST` | `/run` | Triggers a test run (accepts optional `?module=` filter) |
-| `GET` | `/ws/logs` | WebSocket stream for live test execution logs |
+| `WebSocket` | `/ws/logs` | WebSocket stream for live test execution logs |
 
 <!-- INSTALLERS:START -->
 ## Installation
@@ -54,7 +54,7 @@ Installers are idempotent — re-running one updates code and preserves credenti
 ### QA auditor spoke — `install_qa.sh`
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/lbockenstedt/qa/main/install_qa.sh   | sudo bash -s -- --hub ws://LM_HUB_IP:8765
+curl -sSL https://raw.githubusercontent.com/lbockenstedt/qa/main/install_qa.sh | sudo bash -s -- --hub ws://LM_HUB_IP:8765
 ```
 
 | Flag | Purpose |
