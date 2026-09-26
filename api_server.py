@@ -24,6 +24,7 @@ class TestSession:
         self._lock = threading.Lock()
 
     def reset(self, module: Optional[str] = None):
+        """Reset test session state and prepare for a new run."""
         with self._lock:
             self.logs = []
             self.results = []
@@ -45,6 +46,7 @@ class TestSession:
         self.log(f"Step: {name} → {status}", "INFO")
 
     def add_result(self, name: str, status: str, error: str = None):
+        """Record a test scenario execution result."""
         with self._lock:
             self.results.append({"name": name, "status": status, "error": error})
         level = "SUCCESS" if status == "PASS" else "ERROR"
