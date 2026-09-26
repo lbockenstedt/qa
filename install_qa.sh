@@ -9,10 +9,10 @@ set -euo pipefail
 #
 # Usage:
 #   curl -sSL https://raw.githubusercontent.com/lbockenstedt/qa/main/install_qa.sh \
-#     | sudo bash -s -- --hub ws://HUB_IP:8765 --admin-token LM_ADMIN_TOKEN
+#     | sudo bash -s -- --hub wss://HUB_IP:8765 --admin-token LM_ADMIN_TOKEN
 # ============================================================
 
-HUB_URL="ws://localhost:8765"
+HUB_URL="wss://localhost:8765"
 SPOKE_ID="${SPOKE_ID:-qa-$(hostname -s)}"
 SPOKE_SECRET=""
 HUB_SECRET=""
@@ -23,6 +23,8 @@ AB_URL=""
 QA_API_PORT="8090"
 SVC_USER="svc_lm"
 LM_DIR="/opt/lm"
+TLS_CA_CERT=""
+ALLOW_INSECURE_WS=""
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -35,6 +37,10 @@ while [[ "$#" -gt 0 ]]; do
         --password)      LM_PASSWORD="$2";   shift ;;
         --ab)      AB_URL="$2";  shift ;;
         --api-port)      QA_API_PORT="$2";   shift ;;
+        --tls-ca-cert)   TLS_CA_CERT="$2";   shift ;;
+        # Valueless, so it must NOT shift here -- the loop's own trailing
+        # shift consumes it. An extra shift would silently eat the next flag.
+        --insecure-ws)   ALLOW_INSECURE_WS="1" ;;
         --all-prereqs)   ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
@@ -43,6 +49,11 @@ done
 
 ADMIN_TOKEN="${ADMIN_TOKEN:-${LM_ADMIN_TOKEN:-}}"
 [ "$(id -u)" -eq 0 ] || { echo "❌ Must be run as root."; exit 1; }
+
+if [[ "$HUB_URL" =~ ^[wW][sS]:// ]] && [ "$ALLOW_INSECURE_WS" != "1" ]; then
+    echo "❌ Plaintext ws:// hub URL is refused unless --insecure-ws is provided."
+    exit 1
+fi
 
 # A successful install chowns $LM_DIR/qa to $SVC_USER (see chown -R near the end
 # of this script), but every run — including re-runs/updates — executes entirely
@@ -131,6 +142,8 @@ LM_USER=${LM_USER:-admin}
 LM_PASSWORD=${LM_PASSWORD:-}
 AB_URL=${AB_URL:-}
 QA_API_PORT=${QA_API_PORT:-8090}
+QA_HUB_CA_CERT=${TLS_CA_CERT:-}
+QA_ALLOW_INSECURE_WS=${ALLOW_INSECURE_WS:-}
 DOTENV
 chmod 600 "$LM_DIR/qa/.env"
 
