@@ -22,6 +22,7 @@ class QASpoke(BaseSpoke):
         logger.info("TestEngine injected into QASpoke")
 
     async def handle_command(self, command_type: str, data: dict):
+        """Handle inbound control plane commands from the Lab Manager hub."""
         if command_type == "QA_RUN_TESTS":
             if not self.engine:
                 return {"status": "ERROR", "message": "TestEngine not initialized"}
@@ -47,6 +48,7 @@ class QASpoke(BaseSpoke):
         return None
 
     async def get_status(self):
+        """Return current spoke operational status and latest test run summary."""
         return {
             "spoke_id": self.spoke_id,
             "status": "ONLINE",
