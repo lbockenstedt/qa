@@ -50,6 +50,11 @@ done
 ADMIN_TOKEN="${ADMIN_TOKEN:-${LM_ADMIN_TOKEN:-}}"
 [ "$(id -u)" -eq 0 ] || { echo "❌ Must be run as root."; exit 1; }
 
+if [[ "$HUB_URL" =~ ^[wW][sS]:// ]] && [ "$ALLOW_INSECURE_WS" != "1" ]; then
+    echo "❌ Plaintext ws:// hub URL is refused unless --insecure-ws is provided."
+    exit 1
+fi
+
 # A successful install chowns $LM_DIR/qa to $SVC_USER (see chown -R near the end
 # of this script), but every run — including re-runs/updates — executes entirely
 # as root. Root then running `git pull`/`git clone` against a directory owned by
