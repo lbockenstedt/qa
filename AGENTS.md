@@ -26,7 +26,7 @@ Flat, unlike the other spokes — no `src/`. `qa_spoke.py` (spoke), `control_pla
 ## qa-specific gotchas
 
 - **No `VERSION` file** — the only repo in the fleet without one.
-- **`--hub` needs a full `ws://`/`wss://` URL** (default `ws://localhost:8765`); this installer does not normalise a bare hostname.
+- **`--hub` needs a full `ws://`/`wss://` URL** (default `wss://localhost:8765`); this installer does not normalise a bare hostname. Plaintext `ws://` is refused unless installed with `--insecure-ws`; use `--tls-ca-cert` for the self-signed hub cert.
 - It **logs in as a real LM user** (`--user`/`--password`) and needs `--admin-token`. Treat those as credentials.
 - **`--ab URL` wires it to AppBuilder** (the `ab` repo) so findings become filed issues — which `ab` may then try to auto-fix. Be aware of that loop before pointing it at a live fleet.
 - Two installers: `install_qa.sh` and `deploy_qa.sh`.
