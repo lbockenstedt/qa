@@ -43,7 +43,7 @@ The QA REST API runs by default on port `8080`:
 | `GET` | `/health` | Service health status and current engine state |
 | `GET` | `/session` | Current test session state, logs, and results |
 | `POST` | `/run` | Triggers a test run (accepts optional `?module=` filter) |
-| `GET` | `/ws/logs` | WebSocket stream for live test execution logs |
+| `WebSocket` | `/ws/logs` | WebSocket stream for live test execution logs |
 
 <!-- INSTALLERS:START -->
 ## Installation
