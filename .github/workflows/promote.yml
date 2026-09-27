@@ -382,21 +382,30 @@ jobs:
           # \"test\" is expected", ab#338). Keep polling and approve every run
           # we have not already approved; only stop once the queue has been
           # quiet for three consecutive polls.
+          # `approved` means RELEASED: an id is recorded only when the approve
+          # call actually succeeded. A failed attempt goes to `failed` instead,
+          # so it is retried on the next poll, never counts as a quiet poll, and
+          # is never reported as released.
           approved=""
+          failed=""
           quiet=0
           for _ in $(seq 1 24); do
             ids=$(gh api "repos/${{ github.repository }}/actions/runs?branch=$BR&status=action_required" \
                     --jq ".workflow_runs[] | select(.head_sha == \"$SHA\") | .id" 2>/dev/null || true)
             new=""
+            failed=""
             for id in $ids; do
               case " $approved " in *" $id "*) continue ;; esac
               echo "approving parked run $id"
-              gh api -X POST "repos/${{ github.repository }}/actions/runs/$id/approve" || \
-                echo "::warning::could not approve run $id -- approve it by hand to unblock this PR"
-              approved="$approved $id"
-              new="$new $id"
+              if gh api -X POST "repos/${{ github.repository }}/actions/runs/$id/approve"; then
+                approved="$approved $id"
+                new="$new $id"
+              else
+                echo "::warning::could not approve run $id -- will retry on the next poll"
+                failed="$failed $id"
+              fi
             done
-            if [ -n "$approved" ] && [ -z "$new" ]; then
+            if [ -n "$approved" ] && [ -z "$new" ] && [ -z "$failed" ]; then
               quiet=$((quiet + 1))
               if [ "$quiet" -ge 3 ]; then break; fi
             else
@@ -406,6 +415,9 @@ jobs:
           done
           if [ -n "$approved" ]; then
             echo "::notice::released parked run(s):$approved"
-          else
+          elif [ -z "$failed" ]; then
             echo "::notice::no parked run found for $BR @ $SHA"
+          fi
+          if [ -n "$failed" ]; then
+            echo "::warning::could NOT release parked run(s):$failed -- approve them by hand to unblock this PR"
           fi
