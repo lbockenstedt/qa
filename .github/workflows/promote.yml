@@ -382,21 +382,45 @@ jobs:
           # \"test\" is expected", ab#338). Keep polling and approve every run
           # we have not already approved; only stop once the queue has been
           # quiet for three consecutive polls.
+          # `approved` means RELEASED: an id is recorded only when the approve
+          # call actually succeeded. A failed attempt is remembered in
+          # `failed_ever` until that same id is later approved, so a run that
+          # never gets released is always reported, not just when it failed on
+          # the final poll.
+          # A FAILED LISTING IS NOT AN EMPTY QUEUE. The listing call's exit
+          # status is kept: a failure (bad/expired token, missing `actions`
+          # scope, rate limit, 5xx) resets `quiet` so it can never satisfy the
+          # break, and suppresses the "no parked run found" notice in favour of
+          # an explicit UNKNOWN warning.
           approved=""
+          failed_ever=""
+          list_failed=0
           quiet=0
           for _ in $(seq 1 24); do
-            ids=$(gh api "repos/${{ github.repository }}/actions/runs?branch=$BR&status=action_required" \
-                    --jq ".workflow_runs[] | select(.head_sha == \"$SHA\") | .id" 2>/dev/null || true)
+            if ids=$(gh api "repos/${{ github.repository }}/actions/runs?branch=$BR&status=action_required" \
+                       --jq ".workflow_runs[] | select(.head_sha == \"$SHA\") | .id" 2>/dev/null); then
+              list_ok=1
+            else
+              list_ok=0
+              ids=""
+              list_failed=1
+              echo "::warning::could not list parked runs for $BR @ $SHA -- will retry on the next poll"
+            fi
             new=""
+            failed=""
             for id in $ids; do
               case " $approved " in *" $id "*) continue ;; esac
               echo "approving parked run $id"
-              gh api -X POST "repos/${{ github.repository }}/actions/runs/$id/approve" || \
-                echo "::warning::could not approve run $id -- approve it by hand to unblock this PR"
-              approved="$approved $id"
-              new="$new $id"
+              if gh api -X POST "repos/${{ github.repository }}/actions/runs/$id/approve"; then
+                approved="$approved $id"
+                new="$new $id"
+              else
+                echo "::warning::could not approve run $id -- will retry on the next poll"
+                failed="$failed $id"
+                case " $failed_ever " in *" $id "*) ;; *) failed_ever="$failed_ever $id" ;; esac
+              fi
             done
-            if [ -n "$approved" ] && [ -z "$new" ]; then
+            if [ "$list_ok" = "1" ] && [ -n "$approved" ] && [ -z "$new" ] && [ -z "$failed" ]; then
               quiet=$((quiet + 1))
               if [ "$quiet" -ge 3 ]; then break; fi
             else
@@ -404,8 +428,19 @@ jobs:
             fi
             sleep 5
           done
+          outstanding=""
+          for id in $failed_ever; do
+            case " $approved " in *" $id "*) continue ;; esac
+            outstanding="$outstanding $id"
+          done
           if [ -n "$approved" ]; then
             echo "::notice::released parked run(s):$approved"
-          else
+          elif [ -z "$outstanding" ] && [ "$list_failed" = "0" ]; then
             echo "::notice::no parked run found for $BR @ $SHA"
+          fi
+          if [ "$list_failed" = "1" ]; then
+            echo "::warning::at least one attempt to list parked runs for $BR @ $SHA FAILED, so the parked queue is UNKNOWN, not known-empty -- check the token's 'actions' scope and approve any parked run by hand"
+          fi
+          if [ -n "$outstanding" ]; then
+            echo "::warning::could NOT release parked run(s):$outstanding -- approve them by hand to unblock this PR"
           fi
