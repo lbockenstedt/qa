@@ -55,6 +55,11 @@ if [[ "$HUB_URL" =~ ^[wW][sS]:// ]] && [ "$ALLOW_INSECURE_WS" != "1" ]; then
     exit 1
 fi
 
+if [ -n "$TLS_CA_CERT" ] && [ ! -r "$TLS_CA_CERT" ]; then
+    echo "❌ CA certificate not found or not readable at $TLS_CA_CERT"
+    exit 1
+fi
+
 # A successful install chowns $LM_DIR/qa to $SVC_USER (see chown -R near the end
 # of this script), but every run — including re-runs/updates — executes entirely
 # as root. Root then running `git pull`/`git clone` against a directory owned by

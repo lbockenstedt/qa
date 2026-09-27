@@ -107,7 +107,7 @@ async def main():
         )
     if args.tls_ca_cert:
         _pin_hub_ca(args.tls_ca_cert)
-    elif not insecure and os.getenv(HUB_TLS_VERIFY_ENV) != "1":
+    elif not insecure and os.getenv(HUB_TLS_VERIFY_ENV, "0").lower() not in ("1", "true", "yes"):
         logger.warning(
             "Connecting over wss:// without a CA certificate: core control plane "
             "connection will not verify the hub certificate (LM_HUB_TLS_VERIFY=0)."

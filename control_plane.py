@@ -69,6 +69,8 @@ class QAControlPlane(BaseControlPlane):
                  ab_url: str = None, api_port: int = 8090, tls_ca_bundle: str = None):
         if tls_ca_bundle:
             _pin_hub_ca(tls_ca_bundle)
+        if hub_url and "://" not in hub_url:
+            hub_url = f"wss://{hub_url.strip()}"
         super().__init__(spoke_id, secret, hub_secret, hub_url)
         self.module_type = "qa"
         self.webui_creds = webui_creds or {"username": "admin", "password": "password"}
@@ -99,9 +101,7 @@ class QAControlPlane(BaseControlPlane):
                 f"send the shared secret in cleartext. Set {INSECURE_WS_ENV}=1 "
                 "to allow this for local development."
             )
-        if self.tls_ca_bundle:
-            _pin_hub_ca(self.tls_ca_bundle)
-        elif not insecure and os.getenv(HUB_TLS_VERIFY_ENV) != "1":
+        if not self.tls_ca_bundle and not insecure and os.getenv(HUB_TLS_VERIFY_ENV, "0").lower() not in ("1", "true", "yes"):
             logger.warning(
                 "Connecting over wss:// without a CA certificate: core control plane "
                 "connection will not verify the hub certificate (LM_HUB_TLS_VERIFY=0)."
