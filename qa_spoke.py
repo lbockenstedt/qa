@@ -1,7 +1,11 @@
+"""QA spoke: lets the hub trigger the QA test suite and read its latest results."""
+# Base spoke class from the core and the QA test runner.
 from core.src.base_spoke import BaseSpoke
 from qa_engine import TestEngine
+# logging records audit runs.
 import logging
 
+# One named logger for the spoke.
 logger = logging.getLogger("QASpoke")
 
 class QASpoke(BaseSpoke):
@@ -10,6 +14,8 @@ class QASpoke(BaseSpoke):
     Wraps the TestEngine to allow triggering audits from the Hub.
     """
     def __init__(self, spoke_id: str, config: dict):
+        """Set up the spoke with no results yet and no test engine."""
+        # Base setup, then empty results and no engine until set_engine is called.
         super().__init__(spoke_id, config)
         self.last_results = []
         self.engine = None
@@ -18,15 +24,18 @@ class QASpoke(BaseSpoke):
 
     async def set_engine(self, engine):
         """Inject the TestEngine instance."""
+        # Store the engine for later runs.
         self.engine = engine
         logger.info("TestEngine injected into QASpoke")
 
     async def handle_command(self, command_type: str, data: dict):
         """Handle inbound control plane commands from the Lab Manager hub."""
+        # QA_RUN_TESTS: needs an engine.
         if command_type == "QA_RUN_TESTS":
             if not self.engine:
                 return {"status": "ERROR", "message": "TestEngine not initialized"}
 
+            # Run every test and keep the results.
             logger.info("Triggering full QA audit suite...")
             results = await self.engine.run_all()
             self.last_results = results
@@ -40,15 +49,18 @@ class QASpoke(BaseSpoke):
                 "results": results
             }
 
+        # QA_GET_LAST_RESULTS: return the stored results, or say none exist yet.
         if command_type == "QA_GET_LAST_RESULTS":
             if not self.last_results:
                 return {"status": "SUCCESS", "results": [], "message": "No tests have been run yet."}
             return {"status": "SUCCESS", "results": self.last_results}
 
+        # Not a QA command: let other handlers deal with it.
         return None
 
     async def get_status(self):
         """Return current spoke operational status and latest test run summary."""
+        # Spoke id, online status and "passed/total" for the last run.
         return {
             "spoke_id": self.spoke_id,
             "status": "ONLINE",
