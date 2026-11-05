@@ -1,12 +1,20 @@
+"""Entry point and control plane for the QA Auditor spoke.
+
+Connects to the hub, runs the QA API in a background thread and wires the test
+engine into both the spoke and the API.
+"""
+# Standard library: event loop, logging, CLI parsing, env vars and threads.
 import asyncio
 import logging
 import argparse
 import os
 import threading
+# uvicorn serves the FastAPI app; dotenv loads settings from a .env file.
 import uvicorn
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Core control plane, hub TLS helpers, the QA spoke, test engine and API app.
 from core.src.messaging.control_plane import BaseControlPlane
 from hub_client import HUB_TLS_VERIFY_ENV, INSECURE_WS_ENV, _pin_hub_ca
 from qa_spoke import QASpoke
@@ -27,8 +35,11 @@ except ImportError:
         _FMT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         _DFMT = '%Y-%m-%d %H:%M:%S'
         def configure_logging(default_level=logging.INFO, *, log_file=None, **_):
+            """Fallback logging setup: optional log file plus the console."""
+            # Write to a file and the console only when a log file is given.
             handlers = ([logging.FileHandler(log_file), logging.StreamHandler()]
                         if log_file else None)
+            # Apply the shared format, replacing any existing handlers.
             logging.basicConfig(level=default_level, force=True,
                                  format=_FMT, datefmt=_DFMT, handlers=handlers)
 
@@ -36,21 +47,25 @@ except ImportError:
 def _resolve_log_file(name: str):
     """Canonical /var/log/lm/<name>.log if writable, else a local logs/ fallback,
     else None (stderr only). So a file log always exists where it can."""
+    # Try the system-wide log directory, checking the file can be opened for append.
     primary = f"/var/log/lm/{name}.log"
     try:
         os.makedirs("/var/log/lm", exist_ok=True)
         with open(primary, "a"):
             pass
         return primary
+    # Not writable: use a logs/ folder next to this file instead.
     except OSError:
         try:
             local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
             os.makedirs(local, exist_ok=True)
             return os.path.join(local, f"{name}.log")
+        # Neither works: log to stderr only.
         except OSError:
             return None
 
 
+# Set up logging and the control plane's logger.
 configure_logging(log_file=_resolve_log_file("qa"))
 logger = logging.getLogger("QAControlPlane")
 
@@ -67,10 +82,14 @@ class QAControlPlane(BaseControlPlane):
     def __init__(self, spoke_id: str, secret: str, hub_secret: str = None,
                  hub_url: str = None, webui_creds: dict = None,
                  ab_url: str = None, api_port: int = 8090, tls_ca_bundle: str = None):
+        """Pin the hub CA if given, normalise the hub URL, and store the QA settings."""
+        # Trust the given CA bundle for the hub's certificate.
         if tls_ca_bundle:
             _pin_hub_ca(tls_ca_bundle)
+        # A bare host gets the secure wss:// scheme.
         if hub_url and "://" not in hub_url:
             hub_url = f"wss://{hub_url.strip()}"
+        # Base setup, then QA-specific settings (WebUI login defaults to admin/password).
         super().__init__(spoke_id, secret, hub_secret, hub_url)
         self.module_type = "qa"
         self.webui_creds = webui_creds or {"username": "admin", "password": "password"}
@@ -79,9 +98,11 @@ class QAControlPlane(BaseControlPlane):
         self.tls_ca_bundle = tls_ca_bundle
 
     def get_service_name(self) -> str:
+        """Name of the systemd service that runs this spoke."""
         return "lm-qa"
 
     async def run(self):
+        """Start the API thread, wire up the spoke and engine, then run the hub loop."""
         logger.info(f"Starting QA Auditor → {self.hub_url}")
 
         # Preserve the configured scheme before stripping it for the bare
@@ -101,6 +122,7 @@ class QAControlPlane(BaseControlPlane):
                 f"send the shared secret in cleartext. Set {INSECURE_WS_ENV}=1 "
                 "to allow this for local development."
             )
+        # Without a CA bundle or verification enabled, warn that the hub cert is not checked.
         if not self.tls_ca_bundle and not insecure and os.getenv(HUB_TLS_VERIFY_ENV, "0").lower() not in ("1", "true", "yes"):
             logger.warning(
                 "Connecting over wss:// without a CA certificate: core control plane "
@@ -109,16 +131,20 @@ class QAControlPlane(BaseControlPlane):
 
         # FastAPI sidecar in a background thread
         def _run_api():
+            """Serve the FastAPI app with uvicorn (blocks this thread)."""
             cfg = uvicorn.Config(app, host="0.0.0.0", port=self.api_port, log_level="warning")
             uvicorn.Server(cfg).run()
 
+        # Run it as a daemon thread so it stops with the process.
         t = threading.Thread(target=_run_api, daemon=True)
         t.start()
         logger.info(f"QA WebUI listening on :{self.api_port}")
 
+        # Register the QA spoke with the control plane.
         qa_spoke = QASpoke(self.spoke_id, {})
         self.register_module("qa", qa_spoke)
 
+        # Build the test engine with the hub connection details.
         engine = TestEngine(
             hub_host=hub_host,
             spoke_id=self.spoke_id,
@@ -128,15 +154,19 @@ class QAControlPlane(BaseControlPlane):
             insecure=insecure,
             tls_ca_bundle=self.tls_ca_bundle,
         )
+        # Give the engine to both the spoke and the API.
         await qa_spoke.set_engine(engine)
         set_engine(engine)
 
+        # Run the hub connection loop.
         await super().run()
 
 
 if __name__ == "__main__":
+    # Load settings from .env before reading defaults from the environment.
     load_dotenv()
 
+    # Command-line options, each defaulting to an environment variable.
     parser = argparse.ArgumentParser(description="Lab Manager QA Auditor Spoke")
     parser.add_argument("--id",         default=os.getenv("SPOKE_ID", "qa-spoke-1"))
     parser.add_argument("--secret",     default=os.getenv("SPOKE_SECRET", ""))
@@ -148,8 +178,10 @@ if __name__ == "__main__":
     parser.add_argument("--api-port",   type=int, default=int(os.getenv("QA_API_PORT", "8090")))
     parser.add_argument("--tls-ca-cert", default=os.getenv("QA_HUB_CA_CERT"),
                          help="CA bundle for a self-signed hub certificate")
+    # Parse the command line.
     args = parser.parse_args()
 
+    # Build the control plane and run it.
     cp = QAControlPlane(
         spoke_id=args.id,
         secret=args.secret,
