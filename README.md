@@ -4,6 +4,23 @@ The **QA Auditor Spoke** (`module_type = "qa"`) provides autonomous and on-deman
 
 See [`docs/qa.md`](docs/qa.md) for the full architecture reference and [`lm/docs/architecture-topology.md`](../lm/docs/architecture-topology.md) for fleet topology.
 
+## Repository layout
+
+| Path | What it holds |
+| :--- | :--- |
+| `.claude/` | Fleet-owned skills, synced from lm; edit them in lm. |
+| `.github/` | CI (`workflows/ci.yml`), the thin `promote`/`backmerge` callers, promotion scripts and fleet-owned agents. |
+| `docs/` | This module's docs (copies of the canonical pages in `lm/docs`). |
+| `tests/` | pytest suite; CI runs it in the `test` job. |
+| `webui/` | The QA test page. |
+| `__init__.py` | The QA spoke's Python modules live at the root: `main.py` (entry), `qa_spoke.py`, `qa_engine.py`, `control_plane.py`, `api_server.py`, `hub_client.py`, `webui_client.py`. |
+| `AGENTS.md` | Orientation for people and AI agents; the fleet rules block is synced from lm. |
+| `deploy_qa.sh` | Deploys the QA spoke to a test host. |
+| `install_qa.sh` | Installer (idempotent; safe to re-run). |
+| `pytest.ini` | pytest settings. |
+| `README.md` | This file. |
+| `requirements.txt` | Runtime Python dependencies. |
+
 ## Architecture
 
 The QA spoke comprises four core components:
