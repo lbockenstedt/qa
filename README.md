@@ -36,7 +36,7 @@ The QA test suite is organized into three progressive execution tiers:
 - **Tier 2 (Basic Fleet Protocol):** Spoke version querying, and configuration update (`UPDATE_CONFIG`) round-trip verification.
 - **Tier 3 (Spoke-Specific Feature Validation):**
   - **OPNsense (`opnsense`):** Firewall rule creation, verification, and deletion.
-  - **NetBox (`netbox`):** IPAM VM documentation and sync verification.
+  - **NetBox (`netbox`):** Site list read. It writes nothing, so it is safe against a NetBox shared read-only with another environment.
   - **ClearPass (`cppm`):** Device database queries and session tracking.
   - **Client Simulator (`cs`):** Automated client scenario triggering and simulation execution.
   - **Proxmox (`pxmx`):** Virtual machine and LXC container inventory enumeration.
