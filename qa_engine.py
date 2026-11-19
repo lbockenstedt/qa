@@ -73,7 +73,7 @@ class TestEngine:
 
             # ── Tier 3: Spoke-Specific Functionality ──────────────────────────
             TestScenario("OPNsense: Rule Add/Delete",       self.test_opnsense_rules,   ["opnsense"]),
-            TestScenario("NetBox: VM Documentation",        self.test_netbox_doc,        ["netbox"]),
+            TestScenario("NetBox: Site List",               self.test_netbox_sites,      ["netbox"]),
             TestScenario("CPPM: Device Query",              self.test_cppm_query,        ["cppm"]),
             TestScenario("CS: Client Sim Trigger",          self.test_cs_simulation,     ["cs"]),
             TestScenario("PXMX: VM List",                   self.test_pxmx_vm_list,      ["pxmx"]),
@@ -224,15 +224,15 @@ class TestEngine:
 
     # ── Tier 3: NetBox ────────────────────────────────────────────────────────
 
-    async def test_netbox_doc(self) -> bool:
-        """Pass if NetBox documents a test VM."""
-        # Connect if needed, then send a test VM.
+    async def test_netbox_sites(self) -> bool:
+        """Pass if NetBox returns its site list. Only reads: a QA environment
+        may share another environment's NetBox read-only (hub System → Sync)."""
+        # Connect if needed, then list the sites.
         if not self.hub_client.ws:
             await self.hub_client.connect()
-        vm = {"name": "qa-test-vm", "cluster": "proxmox-1", "vcpus": 1, "ram": 1024}
-        res = await self.hub_client.send_command("NETBOX_DOC_VM", vm)
-        ok = res.get("status") == "SUCCESS"
-        api_server.log_event(f"  NetBox VM doc: {'OK' if ok else 'FAIL'}", "INFO")
+        res = await self.hub_client.send_command("NETBOX_GET_SITES", {})
+        ok = res.get("status") == "SUCCESS" and isinstance(res.get("sites"), list)
+        api_server.log_event(f"  NetBox site list: {'OK' if ok else 'FAIL'}", "INFO")
         return ok
 
     # ── Tier 3: CPPM ─────────────────────────────────────────────────────────
